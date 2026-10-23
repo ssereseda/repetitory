@@ -1,15 +1,11 @@
 export interface Tutor {
   id: string;
   title: string;
-  description: string;
   city: string;
-  tutorName: string;
   price: number;
   priceLabel: string;
-  images: string[];
+  image: string | null;
   avitoUrl: string;
-  experience?: string;
-  specialization?: string;
 }
 
 export interface GameRound {

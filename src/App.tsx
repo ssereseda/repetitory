@@ -22,9 +22,7 @@ export default function App() {
   const [rounds, setRounds] = useState<GameRound[]>([]);
   const [guess, setGuess] = useState(1000);
   const [hasAnswered, setHasAnswered] = useState(false);
-  const [showDescription, setShowDescription] = useState(false);
   const [sliderAnimated, setSliderAnimated] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const sliderRef = useRef<HTMLInputElement>(null);
 
   const startGame = useCallback(() => {
@@ -34,8 +32,7 @@ export default function App() {
     setRounds([]);
     setGuess(1000);
     setHasAnswered(false);
-    setShowDescription(false);
-    setCurrentImageIndex(0);
+    setSliderAnimated(false);
     setPage('game');
   }, []);
 
@@ -79,8 +76,6 @@ export default function App() {
       setCurrentRound((prev) => prev + 1);
       setGuess(1000);
       setHasAnswered(false);
-      setShowDescription(false);
-      setCurrentImageIndex(0);
     }
   };
 
@@ -92,12 +87,20 @@ export default function App() {
       try {
         await navigator.share({ title: 'Репетиторий', text });
       } catch {
-        await navigator.clipboard.writeText(text);
-        alert('Результат скопирован в буфер обмена!');
+        try {
+          await navigator.clipboard.writeText(text);
+          alert('Результат скопирован в буфер обмена!');
+        } catch {
+          alert(text);
+        }
       }
     } else {
-      await navigator.clipboard.writeText(text);
-      alert('Результат скопирован в буфер обмена!');
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Результат скопирован в буфер обмена!');
+      } catch {
+        alert(text);
+      }
     }
   };
 
@@ -113,10 +116,6 @@ export default function App() {
           guess={guess}
           setGuess={setGuess}
           hasAnswered={hasAnswered}
-          showDescription={showDescription}
-          setShowDescription={setShowDescription}
-          currentImageIndex={currentImageIndex}
-          setCurrentImageIndex={setCurrentImageIndex}
           rounds={rounds}
           onGuess={handleGuess}
           onNext={nextRound}
@@ -230,10 +229,6 @@ interface GamePageProps {
   guess: number;
   setGuess: (v: number) => void;
   hasAnswered: boolean;
-  showDescription: boolean;
-  setShowDescription: (v: boolean) => void;
-  currentImageIndex: number;
-  setCurrentImageIndex: (v: number) => void;
   rounds: GameRound[];
   onGuess: () => void;
   onNext: () => void;
@@ -247,10 +242,6 @@ function GamePage({
   guess,
   setGuess,
   hasAnswered,
-  showDescription,
-  setShowDescription,
-  currentImageIndex,
-  setCurrentImageIndex,
   rounds,
   onGuess,
   onNext,
@@ -258,9 +249,12 @@ function GamePage({
 }: GamePageProps) {
   const totalPoints = rounds.reduce((sum, r) => sum + r.points, 0);
   const progress = ((currentRound + (hasAnswered ? 1 : 0)) / totalRounds) * 100;
+  const [imgError, setImgError] = useState(false);
 
-  const images = tutor.images.length > 0 ? tutor.images : [];
-  const hasMultipleImages = images.length > 1;
+  // Reset image error state when tutor changes
+  useEffect(() => {
+    setImgError(false);
+  }, [tutor.id]);
 
   return (
     <div className="flex-1 flex flex-col max-w-lg mx-auto w-full px-4 py-3 pb-safe animate-fadeIn">
@@ -294,83 +288,31 @@ function GamePage({
       <div className="flex-1 overflow-y-auto">
         {/* Image */}
         <div className="relative mb-4 rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3]">
-          {images.length > 0 ? (
+          {tutor.image && !imgError ? (
             <img
-              src={images[currentImageIndex]}
+              src={tutor.image}
               alt={tutor.title}
               className="w-full h-full object-cover"
               loading="lazy"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-[#26CD94]/10 to-[#26CD94]/5 flex flex-col items-center justify-center">
               <div className="text-5xl mb-2 opacity-30">📐</div>
-              <div className="text-xs text-gray-400">Фото из объявления</div>
-            </div>
-          )}
-          {hasMultipleImages && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-              {images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentImageIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'
-                  }`}
-                />
-              ))}
+              <div className="text-xs text-gray-400">Объявление #{tutor.id}</div>
             </div>
           )}
         </div>
 
         {/* Title & Info */}
-        <h2 className="text-lg font-bold text-gray-900 mb-1 leading-tight">
+        <h2 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
           {tutor.title}
         </h2>
 
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-sm text-gray-500 flex items-center gap-1">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-sm text-gray-500 flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
             <span>📍</span> {tutor.city}
           </span>
-          {tutor.tutorName && (
-            <span className="text-sm text-gray-500 flex items-center gap-1">
-              <span>👤</span> {tutor.tutorName}
-            </span>
-          )}
-        </div>
-
-        {/* Experience & Specialization */}
-        {(tutor.experience || tutor.specialization) && (
-          <div className="flex gap-2 mb-3 flex-wrap">
-            {tutor.experience && (
-              <span className="text-xs bg-[#26CD94]/10 text-[#1ba876] px-2 py-1 rounded-lg">
-                Опыт: {tutor.experience}
-              </span>
-            )}
-            {tutor.specialization && (
-              <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg">
-                {tutor.specialization}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Description */}
-        <div className="mb-4">
-          <p
-            className={`text-sm text-gray-600 leading-relaxed ${
-              !showDescription ? 'line-clamp-3' : ''
-            }`}
-          >
-            {tutor.description}
-          </p>
-          {tutor.description.length > 150 && (
-            <button
-              onClick={() => setShowDescription(!showDescription)}
-              className="text-sm text-[#26CD94] font-medium mt-1 hover:underline"
-            >
-              {showDescription ? 'Свернуть' : 'Подробнее'}
-            </button>
-          )}
         </div>
 
         {/* Price guessing section */}
@@ -381,7 +323,7 @@ function GamePage({
 
           {/* Current guess display */}
           <div className="text-center mb-3">
-            <span className="text-3xl font-bold text-gray-900">
+            <span className="text-3xl font-bold text-gray-900 transition-all duration-200">
               {formatPrice(guess)} ₽
             </span>
           </div>
@@ -398,7 +340,6 @@ function GamePage({
               onChange={(e) => setGuess(Number(e.target.value))}
               disabled={hasAnswered}
               className="w-full h-2 rounded-full appearance-none cursor-pointer disabled:cursor-not-allowed
-                bg-gradient-to-r from-[#26CD94]/30 to-[#26CD94]
                 [&::-webkit-slider-thumb]:appearance-none
                 [&::-webkit-slider-thumb]:w-6
                 [&::-webkit-slider-thumb]:h-6
@@ -582,7 +523,7 @@ function ResultsPage({ rounds, totalPoints, onRestart, onShare, onHome, onAbout 
               <span className="text-gray-600 truncate flex-1 mr-2">
                 {round.tutor.city}
               </span>
-              <span className="text-gray-400 mr-2">
+              <span className="text-gray-400 mr-2 whitespace-nowrap">
                 {formatPrice(round.guess)} → {formatPrice(round.actualPrice)} ₽
               </span>
               <span
@@ -657,7 +598,8 @@ function AboutPage({ onBack, onRestart }: { onBack: () => void; onRestart: () =>
 
         <p>
           Источник данных — опубликованные объявления репетиторов по математике из Ленинградской
-          области, собранные с платформы Авито.
+          области, собранные с платформы Авито. В игре используются реальные фотографии и заголовки
+          из объявлений.
         </p>
 
         <p>
@@ -668,7 +610,7 @@ function AboutPage({ onBack, onRestart }: { onBack: () => void; onRestart: () =>
         <h3 className="font-semibold text-gray-800 mt-4">Как играть:</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>Вам показываются 10 случайных объявлений</li>
-          <li>Изучите фото, описание и характеристики</li>
+          <li>Изучите фото и заголовок объявления</li>
           <li>Передвиньте бегунок, чтобы выбрать предполагаемую цену</li>
           <li>Нажмите «Оценить» и узнайте правильный ответ</li>
           <li>За точность начисляются баллы (максимум 100 за объявление)</li>
