@@ -447,16 +447,6 @@ function ResultDisplay({
         <span className="text-sm text-gray-500">Баллы: </span>
         <span className="text-xl font-bold text-[#26CD94]">+{points}</span>
       </div>
-
-      {/* Avito link */}
-      <a
-        href={tutor.avitoUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block text-center text-sm text-[#26CD94] hover:underline"
-      >
-        Посмотреть объявление на Авито →
-      </a>
     </div>
   );
 }
